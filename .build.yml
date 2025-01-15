@@ -1,0 +1,14 @@
+image: alpine/edge
+packages:
+  - ko
+  - go # XXX: why not dep from ko?
+secrets:
+  - d45b9b20-bc8b-480e-8e6e-edb5e0fd5848 # containers auth
+environment:
+  KO_DOCKER_REPO: ghcr.io/xdavidwu/listables
+tasks:
+  - publish: |
+      
+      cd listables
+      # XXX github.com/google/go-containerregistry/pkg/authn does not search for this yet
+      env REGISTRY_AUTH_FILE=~/.config/containers/auth.json ko publish --bare .
