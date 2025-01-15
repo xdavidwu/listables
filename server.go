@@ -111,7 +111,15 @@ var (
 		}
 	</style>
 	<script>
-		const sortBy = (idx) => {
+		let sortedBy;
+		let reverse = false;
+		const toggleSort = (idx) => {
+			if (sortedBy == idx) {
+				reverse = !reverse;
+			} else {
+				sortedBy = idx;
+				reverse = false;
+			}
 			const els = Array.from(document.querySelectorAll('tbody>tr'));
 			const dotdot = els.shift();
 
@@ -119,7 +127,8 @@ var (
 				a.children[idx].innerText.localeCompare(b.children[idx].innerText);
 			const numCmp = (a, b) =>
 				parseInt(a.children[idx].dataset.numeric, 10) - parseInt(b.children[idx].dataset.numeric, 10);
-			els.sort(idx == 2 ? numCmp : textCmp);
+			const cmp = idx == 2 ? numCmp : textCmp;
+			els.sort(reverse ? (a, b) => -cmp(a, b) : cmp);
 
 			els.splice(0, 0, dotdot);
 			document.querySelector('tbody').replaceChildren(...els);
@@ -132,9 +141,9 @@ var (
 	<div><table>
 		<thead>
 			<tr>
-				<th><a onclick="sortBy(0)">Name</a></th>
-				<th><a onclick="sortBy(1)">Last Modified</a></th>
-				<th><a onclick="sortBy(2)">Size</a></th>
+				<th><a onclick="toggleSort(0)">Name</a></th>
+				<th><a onclick="toggleSort(1)">Last Modified</a></th>
+				<th><a onclick="toggleSort(2)">Size</a></th>
 			</tr>
 		</thead>
 		<tbody>
