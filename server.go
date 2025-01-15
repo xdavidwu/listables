@@ -110,13 +110,32 @@ var (
 			}
 		}
 	</style>
+	<script>
+		const sortBy = (idx) => {
+			const els = Array.from(document.querySelectorAll('tbody>tr'));
+			const dotdot = els.shift();
+
+			const textCmp = (a, b) =>
+				a.children[idx].innerText.localeCompare(b.children[idx].innerText);
+			const numCmp = (a, b) =>
+				parseInt(a.children[idx].dataset.numeric, 10) - parseInt(b.children[idx].dataset.numeric, 10);
+			els.sort(idx == 2 ? numCmp : textCmp);
+
+			els.splice(0, 0, dotdot);
+			document.querySelector('tbody').replaceChildren(...els);
+		};
+	</script>
 	<title>Index of {{.Path}}</title>
 </head>
 <body>
 	<h1>Index of {{.Path}}</h1>
 	<div><table>
 		<thead>
-			<tr><th>Name</th><th>Last Modified</th><th>Size</th></tr>
+			<tr>
+				<th><a onclick="sortBy(0)">Name</a></th>
+				<th><a onclick="sortBy(1)">Last Modified</a></th>
+				<th><a onclick="sortBy(2)">Size</a></th>
+			</tr>
 		</thead>
 		<tbody>
 			<tr><td><a href="..">..</a></td></tr>
@@ -125,7 +144,11 @@ var (
 				<td><a href="{{.Name}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
 				{{with .Info}}
 					<td>{{.ModTime | timefmt}}</td>
-					<td>{{if .IsDir}}- {{else}}{{.Size | numfmt}}{{end}}</td>
+					{{if .IsDir}}
+						<td data-numeric="0">- </td>
+					{{else}}
+						<td data-numeric="{{.Size}}">{{.Size | numfmt}}</td>
+					{{end}}
 				{{end}}
 			</tr>
 		{{end}}
