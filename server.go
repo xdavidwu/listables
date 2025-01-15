@@ -9,6 +9,7 @@ package main
 import "C"
 
 import (
+	"flag"
 	"html/template"
 	"io/fs"
 	"net"
@@ -21,6 +22,9 @@ import (
 )
 
 var (
+	addr = flag.String("l", "0.0.0.0:8000", "Listen on address")
+	root = flag.String("r", ".", "Root of content")
+
 	numfmtSuffix = []string{"", "K", "M", "G", "T"}
 
 	tpl = template.Must(template.New("dirlisting").Funcs(template.FuncMap{
@@ -184,11 +188,16 @@ type Data struct {
 }
 
 func main() {
-	if err := syscall.Chroot("."); err != nil {
+	flag.Parse()
+
+	if err := os.Chdir(*root); err != nil {
+		panic(err)
+	}
+	if err := syscall.Chroot(*root); err != nil {
 		panic(err)
 	}
 
-	l, err := net.Listen("tcp", "0.0.0.0:8000")
+	l, err := net.Listen("tcp", *addr)
 	if err != nil {
 		panic(err)
 	}
