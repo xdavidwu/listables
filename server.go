@@ -88,6 +88,12 @@ var (
 			padding: 16px;
 			overflow: auto;
 		}
+		th.asc::after {
+			content: '↑';
+		}
+		th.desc::after {
+			content: '↓';
+		}
 		a {
 			text-decoration: none;
 		}
@@ -132,6 +138,10 @@ var (
 
 			els.splice(0, 0, dotdot);
 			document.querySelector('tbody').replaceChildren(...els);
+
+			document.querySelectorAll('thead>tr>th').forEach((el, i) =>
+				el.className = i == idx ? (reverse ? 'desc' : 'asc') : ''
+			);
 		};
 	</script>
 	<title>Index of {{.Path}}</title>
