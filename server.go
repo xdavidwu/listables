@@ -35,7 +35,7 @@ var (
 				idx += 1
 			}
 			if idx == 0 {
-				return strconv.FormatInt(i, 10)+" " // for better alignment
+				return strconv.FormatInt(i, 10) + " " // for better alignment
 			}
 			return strconv.FormatFloat(f, 'f', 1, 64) + numfmtSuffix[idx]
 		},
