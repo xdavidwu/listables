@@ -12,6 +12,7 @@ import (
 	"flag"
 	"html/template"
 	"io/fs"
+	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -189,6 +190,9 @@ type Data struct {
 
 func main() {
 	flag.Parse()
+
+	// load mime map before chroot'ing
+	mime.TypeByExtension(".o")
 
 	if err := os.Chdir(*root); err != nil {
 		panic(err)
