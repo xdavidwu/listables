@@ -31,8 +31,11 @@ var (
 			f := float64(i)
 			idx := 0
 			for f > 1000 && idx < len(numfmtSuffix)-1 {
-				f /= 1000
+				f /= 1024
 				idx += 1
+			}
+			if idx == 0 {
+				return strconv.FormatInt(i, 10)+" " // for better alignment
 			}
 			return strconv.FormatFloat(f, 'f', 1, 64) + numfmtSuffix[idx]
 		},
@@ -69,6 +72,7 @@ var (
 			text-align: left;
 			line-height: 24px;
 			padding-right: 16px;
+			white-space: pre;
 		}
 		th {
 			font-weight: normal;
@@ -121,7 +125,7 @@ var (
 				<td><a href="{{.Name}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
 				{{with .Info}}
 					<td>{{.ModTime | timefmt}}</td>
-					<td>{{if .IsDir}}-{{else}}{{.Size | numfmt}}{{end}}</td>
+					<td>{{if .IsDir}}- {{else}}{{.Size | numfmt}}{{end}}</td>
 				{{end}}
 			</tr>
 		{{end}}
