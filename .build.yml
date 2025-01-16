@@ -1,5 +1,6 @@
 image: alpine/edge
 packages:
+  - podman
   - ko
   - go # XXX: why not dep from ko?
 secrets:
@@ -7,8 +8,21 @@ secrets:
 environment:
   KO_DOCKER_REPO: ghcr.io/xdavidwu/listables
 tasks:
+  - setup: |
+      sudo rc-service cgroups start
+      sudo modprobe tun
+      sudo chmod o+rw /dev/net/tun
+      echo build:100000:65536 | sudo tee /etc/subuid
+      echo build:100000:65536 | sudo tee /etc/subgid
+  - publish-base: |
+      podman run -v .:/work cgr.dev/chainguard/apko:latest \
+        build /work/listables/base.apko.yaml base /work/base.tar
+      podman load -i base.tar
+      podman push base:latest-amd64 ghcr.io/xdavidwu/listables/base:latest
   - publish: |
       
       cd listables
       # XXX github.com/google/go-containerregistry/pkg/authn does not search for this yet
-      env REGISTRY_AUTH_FILE=~/.config/containers/auth.json ko publish --bare .
+      env REGISTRY_AUTH_FILE=~/.config/containers/auth.json \
+        KO_DEFAULTBASEIMAGE=ghcr.io/xdavidwu/listables/base:latest \
+        ko publish --bare .
