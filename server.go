@@ -247,7 +247,7 @@ func main() {
 			entries := map[string]fs.FileInfo{}
 			for _, d := range ds {
 				dname := d.Name()
-				fp := p + "/" + dname
+				fp := path.Clean(p + "/" + dname)
 				if d.Type()&fs.ModeSymlink == fs.ModeSymlink {
 					e, err := sf.Stat(fp)
 					if err != nil {
