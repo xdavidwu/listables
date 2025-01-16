@@ -1,0 +1,5 @@
+FROM alpine:latest as extract
+RUN apk add shared-mime-info
+
+FROM scratch
+COPY --from=extract /usr/share/mime/globs2 /usr/share/mime/globs2

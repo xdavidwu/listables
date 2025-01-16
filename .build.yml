@@ -15,10 +15,8 @@ tasks:
       echo build:100000:65536 | sudo tee /etc/subuid
       echo build:100000:65536 | sudo tee /etc/subgid
   - publish-base: |
-      podman run -v .:/work cgr.dev/chainguard/apko:latest \
-        build /work/listables/base.apko.yaml base /work/base.tar
-      podman load -i base.tar
-      podman push base:latest-amd64 ghcr.io/xdavidwu/listables/base:latest
+      podman build -f listables/Containerfile.base -t ghcr.io/xdavidwu/listables/base:latest
+      podman push ghcr.io/xdavidwu/listables/base:latest
   - publish: |
       
       cd listables
