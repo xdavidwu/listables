@@ -25,6 +25,7 @@ import (
 var (
 	addr = flag.String("l", "0.0.0.0:8000", "Listen on address")
 	root = flag.String("r", ".", "Root of content")
+	foot = flag.String("f", "", "Footer message")
 
 	numfmtSuffix = []string{"", "K", "M", "G", "T"}
 
@@ -98,6 +99,11 @@ var (
 		}
 		th.desc::after {
 			content: '↓';
+		}
+		footer {
+			font-family: monospace;
+			color: #787878;
+			padding-top: 12px;
 		}
 		a {
 			text-decoration: none;
@@ -178,6 +184,9 @@ var (
 		{{end}}
 		</tbody>
 	</table></div>
+	{{if .Footer}}
+		<footer>{{ .Footer }}</footer>
+	{{end}}
 </body>
 </html>
 `))
@@ -186,6 +195,7 @@ var (
 type Data struct {
 	Path    string
 	Entries []fs.DirEntry
+	Footer  string
 }
 
 func main() {
@@ -229,7 +239,7 @@ func main() {
 				w.WriteHeader(404)
 				return
 			}
-			tpl.Execute(w, Data{r.URL.Path, ds})
+			tpl.Execute(w, Data{r.URL.Path, ds, *foot})
 		} else {
 			staticHandler.ServeHTTP(w, r)
 		}
