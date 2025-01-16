@@ -177,7 +177,7 @@ var (
 			</tr>
 		{{end}}
 		</tbody>
-	</div></table>
+	</table></div>
 </body>
 </html>
 `))
