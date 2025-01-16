@@ -12,6 +12,7 @@ import (
 	"flag"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -169,16 +170,14 @@ var (
 		</thead>
 		<tbody>
 			<tr><td><a href="..">..</a></td></tr>
-		{{range .Entries}}
+		{{range $name, $e := .Entries}}
 			<tr>
-				<td><a href="{{.Name}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
-				{{with .Info}}
-					<td>{{.ModTime | timefmt}}</td>
-					{{if .IsDir}}
-						<td data-numeric="0">- </td>
-					{{else}}
-						<td data-numeric="{{.Size}}">{{.Size | numfmt}}</td>
-					{{end}}
+				<td><a href="{{$name}}">{{$name}}{{if $e.IsDir}}/{{end}}</a></td>
+				<td>{{$e.ModTime | timefmt}}</td>
+				{{if $e.IsDir}}
+					<td data-numeric="0">- </td>
+				{{else}}
+					<td data-numeric="{{$e.Size}}">{{$e.Size | numfmt}}</td>
 				{{end}}
 			</tr>
 		{{end}}
@@ -194,7 +193,7 @@ var (
 
 type Data struct {
 	Path    string
-	Entries []fs.DirEntry
+	Entries map[string]fs.FileInfo
 	Footer  string
 }
 
@@ -219,6 +218,11 @@ func main() {
 	if !ok {
 		panic("fs impl not supporting fs.ReadDirFS")
 	}
+	sf, ok := f.(fs.StatFS)
+	if !ok {
+		panic("fs impl not supporting fs.StatFS")
+	}
+
 	staticHandler := http.FileServerFS(f)
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		l := len(r.URL.Path)
@@ -239,7 +243,29 @@ func main() {
 				w.WriteHeader(404)
 				return
 			}
-			tpl.Execute(w, Data{r.URL.Path, ds, *foot})
+
+			entries := map[string]fs.FileInfo{}
+			for _, d := range ds {
+				dname := d.Name()
+				fp := p + "/" + dname
+				if d.Type()&fs.ModeSymlink == fs.ModeSymlink {
+					e, err := sf.Stat(fp)
+					if err != nil {
+						slog.Warn("cannot stat symlink", "file", fp, "error", err)
+					} else {
+						entries[dname] = e
+					}
+				} else {
+					e, err := d.Info()
+					if err != nil {
+						slog.Warn("cannot fs.DirEntry.Info()", "file", fp, "error", err)
+					} else {
+						entries[dname] = e
+					}
+				}
+			}
+
+			tpl.Execute(w, Data{r.URL.Path, entries, *foot})
 		} else {
 			staticHandler.ServeHTTP(w, r)
 		}
