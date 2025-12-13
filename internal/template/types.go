@@ -1,52 +1,19 @@
-package main
-
-// #cgo LDFLAGS: -static
-// #define _GNU_SOURCE
-// #include <sched.h>
-// __attribute__((constructor)) void f() {
-//	unshare(CLONE_NEWUSER);
-// }
-import "C"
+package template
 
 import (
-	"flag"
-	"html/template"
+	gotpl "html/template"
 	"io/fs"
-	"log/slog"
-	"mime"
-	"net"
-	"net/http"
-	"os"
-	"path"
 	"strconv"
-	"syscall"
 	"time"
 )
 
-var (
-	addr = flag.String("l", "0.0.0.0:8000", "Listen on address")
-	root = flag.String("r", ".", "Root of content")
-	foot = flag.String("f", "", "Footer message")
+type Data struct {
+	Path    string
+	Entries map[string]fs.FileInfo
+	Footer  string
+}
 
-	numfmtSuffix = []string{"", "K", "M", "G", "T"}
-
-	tpl = template.Must(template.New("dirlisting").Funcs(template.FuncMap{
-		"timefmt": func(t time.Time) string {
-			return t.Format(time.RFC3339)
-		},
-		"numfmt": func(i int64) string {
-			f := float64(i)
-			idx := 0
-			for f > 1000 && idx < len(numfmtSuffix)-1 {
-				f /= 1024
-				idx += 1
-			}
-			if idx == 0 {
-				return strconv.FormatInt(i, 10) + " " // for better alignment
-			}
-			return strconv.FormatFloat(f, 'f', 1, 64) + numfmtSuffix[idx]
-		},
-	}).Parse(`<!doctype html>
+const tpl = `<!doctype html>
 <html>
 <head>
 	<meta name="viewport" content="initial-scale=1">
@@ -187,92 +154,26 @@ var (
 		<footer>{{ .Footer }}</footer>
 	{{end}}
 </body>
-</html>
-`))
+</html>`
+
+var (
+	numfmtSuffix = []string{"", "K", "M", "G", "T"}
+
+	Template = gotpl.Must(gotpl.New("dirlisting").Funcs(gotpl.FuncMap{
+		"timefmt": func(t time.Time) string {
+			return t.Format(time.RFC3339)
+		},
+		"numfmt": func(i int64) string {
+			f := float64(i)
+			idx := 0
+			for f > 1000 && idx < len(numfmtSuffix)-1 {
+				f /= 1024
+				idx += 1
+			}
+			if idx == 0 {
+				return strconv.FormatInt(i, 10) + " " // for better alignment
+			}
+			return strconv.FormatFloat(f, 'f', 1, 64) + numfmtSuffix[idx]
+		},
+	}).Parse(tpl))
 )
-
-type Data struct {
-	Path    string
-	Entries map[string]fs.FileInfo
-	Footer  string
-}
-
-func main() {
-	flag.Parse()
-
-	// load mime map before chroot'ing
-	mime.TypeByExtension(".o")
-
-	if err := os.Chdir(*root); err != nil {
-		panic(err)
-	}
-	if err := syscall.Chroot(*root); err != nil {
-		panic(err)
-	}
-
-	l, err := net.Listen("tcp", *addr)
-	if err != nil {
-		panic(err)
-	}
-	f, ok := os.DirFS(".").(fs.ReadDirFS)
-	if !ok {
-		panic("fs impl not supporting fs.ReadDirFS")
-	}
-	sf, ok := f.(fs.StatFS)
-	if !ok {
-		panic("fs impl not supporting fs.StatFS")
-	}
-
-	staticHandler := http.FileServerFS(f)
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		l := len(r.URL.Path)
-		if r.URL.Path[l-1] == '/' {
-			p := r.URL.Path
-			if r.URL.Path[0] != '/' {
-				p = "/" + r.URL.Path
-			}
-			p = path.Clean(p)
-			// net/http.ioFS
-			if p == "/" {
-				p = "."
-			} else {
-				p = p[1:]
-			}
-			ds, err := f.ReadDir(p)
-			if err != nil {
-				w.WriteHeader(404)
-				return
-			}
-
-			entries := map[string]fs.FileInfo{}
-			for _, d := range ds {
-				dname := d.Name()
-				fp := path.Clean(p + "/" + dname)
-				if d.Type()&fs.ModeSymlink == fs.ModeSymlink {
-					e, err := sf.Stat(fp)
-					if err != nil {
-						slog.Warn("cannot stat symlink", "file", fp, "error", err)
-					} else {
-						entries[dname] = e
-					}
-				} else {
-					e, err := d.Info()
-					if err != nil {
-						slog.Warn("cannot fs.DirEntry.Info()", "file", fp, "error", err)
-					} else {
-						entries[dname] = e
-					}
-				}
-			}
-
-			tpl.Execute(w, Data{r.URL.Path, entries, *foot})
-		} else {
-			staticHandler.ServeHTTP(w, r)
-		}
-	})
-
-	s := http.Server{Handler: h}
-	if err := s.Serve(l); err != nil {
-		panic(err)
-	}
-}
