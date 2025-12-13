@@ -23,4 +23,4 @@ tasks:
       # XXX github.com/google/go-containerregistry/pkg/authn does not search for this yet
       env REGISTRY_AUTH_FILE=~/.config/containers/auth.json \
         KO_DEFAULTBASEIMAGE=ghcr.io/xdavidwu/listables/base:latest \
-        ko publish --bare .
+        ko publish --bare ./cmd/listables
