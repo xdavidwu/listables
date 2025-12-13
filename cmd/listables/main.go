@@ -19,7 +19,7 @@ import (
 	"path"
 	"syscall"
 
-	"github.com/xdavidwu/listables/internal/template"
+	"github.com/xdavidwu/listables/internal/dirlist"
 )
 
 var (
@@ -96,7 +96,7 @@ func main() {
 				}
 			}
 
-			template.Template.Execute(w, template.Data{
+			dirlist.Template.Execute(w, dirlist.Data{
 				Path:    r.URL.Path,
 				Entries: entries,
 				Footer:  *foot,

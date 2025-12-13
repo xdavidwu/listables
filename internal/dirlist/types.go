@@ -1,7 +1,7 @@
-package template
+package dirlist
 
 import (
-	gotpl "html/template"
+	"html/template"
 	"io/fs"
 	"strconv"
 	"time"
@@ -159,7 +159,7 @@ const tpl = `<!doctype html>
 var (
 	numfmtSuffix = []string{"", "K", "M", "G", "T"}
 
-	Template = gotpl.Must(gotpl.New("dirlisting").Funcs(gotpl.FuncMap{
+	Template = template.Must(template.New("dirlisting").Funcs(template.FuncMap{
 		"timefmt": func(t time.Time) string {
 			return t.Format(time.RFC3339)
 		},
