@@ -10,8 +10,6 @@ import "C"
 
 import (
 	"flag"
-	"io/fs"
-	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -45,16 +43,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	f, ok := os.DirFS(".").(fs.ReadDirFS)
-	if !ok {
-		panic("fs impl not supporting fs.ReadDirFS")
-	}
-	sf, ok := f.(fs.StatFS)
-	if !ok {
-		panic("fs impl not supporting fs.StatFS")
-	}
 
-	staticHandler := http.FileServerFS(f)
+	dirlist.Footer = *foot
+	fs := os.DirFS(".")
+	staticHandler := http.FileServerFS(fs)
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		l := len(r.URL.Path)
 		if r.URL.Path[l-1] == '/' {
@@ -69,38 +61,11 @@ func main() {
 			} else {
 				p = p[1:]
 			}
-			ds, err := f.ReadDir(p)
-			if err != nil {
+
+			if err := dirlist.Render(w, fs, p); err != nil {
 				w.WriteHeader(404)
 				return
 			}
-
-			entries := map[string]fs.FileInfo{}
-			for _, d := range ds {
-				dname := d.Name()
-				fp := path.Clean(p + "/" + dname)
-				if d.Type()&fs.ModeSymlink == fs.ModeSymlink {
-					e, err := sf.Stat(fp)
-					if err != nil {
-						slog.Warn("cannot stat symlink", "file", fp, "error", err)
-					} else {
-						entries[dname] = e
-					}
-				} else {
-					e, err := d.Info()
-					if err != nil {
-						slog.Warn("cannot fs.DirEntry.Info()", "file", fp, "error", err)
-					} else {
-						entries[dname] = e
-					}
-				}
-			}
-
-			dirlist.Template.Execute(w, dirlist.Data{
-				Path:    r.URL.Path,
-				Entries: entries,
-				Footer:  *foot,
-			})
 		} else {
 			staticHandler.ServeHTTP(w, r)
 		}
