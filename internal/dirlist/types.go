@@ -16,6 +16,7 @@ type Data struct {
 const tpl = `<!doctype html>
 <html>
 <head>
+	<meta charset="utf-8">
 	<meta name="viewport" content="initial-scale=1">
 	<style>
 		body {
