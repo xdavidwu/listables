@@ -11,25 +11,11 @@ var (
 	Footer = ""
 )
 
-func Render(w io.Writer, f fs.FS, p string) error {
-	rdfs, ok := f.(fs.ReadDirFS)
-	if !ok {
-		panic("fs impl not supporting fs.ReadDirFS")
-	}
-	sfs, ok := f.(fs.StatFS)
-	if !ok {
-		panic("fs impl not supporting fs.StatFS")
-	}
-
-	ds, err := rdfs.ReadDir(p)
-	if err != nil {
-		return nil
-	}
-
+func Collect(ds []fs.DirEntry, sfs fs.StatFS, parent string) map[string]fs.FileInfo {
 	entries := map[string]fs.FileInfo{}
 	for _, d := range ds {
 		dname := d.Name()
-		fp := path.Join(p, dname)
+		fp := path.Join(parent, dname)
 		if d.Type()&fs.ModeSymlink == fs.ModeSymlink {
 			e, err := sfs.Stat(fp)
 			if err != nil {
@@ -46,16 +32,36 @@ func Render(w io.Writer, f fs.FS, p string) error {
 			}
 		}
 	}
+	return entries
+}
 
-	dp := p
+func UrlPath(p string) string {
 	if p == "" || p == "." {
-		dp = "/"
+		return "/"
 	} else if p[0] != '/' {
-		dp = "/" + p
+		return "/" + p
 	}
+	return p
+}
+
+func Render(w io.Writer, f fs.FS, p string) error {
+	rdfs, ok := f.(fs.ReadDirFS)
+	if !ok {
+		panic("fs impl not supporting fs.ReadDirFS")
+	}
+	sfs, ok := f.(fs.StatFS)
+	if !ok {
+		panic("fs impl not supporting fs.StatFS")
+	}
+
+	ds, err := rdfs.ReadDir(p)
+	if err != nil {
+		return err
+	}
+
 	return Template.Execute(w, Data{
-		Path:    dp,
-		Entries: entries,
+		Path:    UrlPath(p),
+		Entries: Collect(ds, sfs, p),
 		Footer:  Footer,
 	})
 }
